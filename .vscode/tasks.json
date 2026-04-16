@@ -1,0 +1,39 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Flutter: تشغيل على Chrome",
+      "type": "shell",
+      "command": "${workspaceFolder}\\run_chrome.bat",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "NO_PAUSE": "1"
+        }
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Flutter: pub get فقط",
+      "type": "shell",
+      "command": "\"C:\\Users\\hacker\\Desktop\\New folder\\flutter\\bin\\flutter.bat\" pub get",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

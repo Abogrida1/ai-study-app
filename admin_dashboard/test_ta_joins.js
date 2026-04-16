@@ -1,0 +1,1 @@
+const { createClient } = require('@supabase/supabase-js'); const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY); async function t() { const {data, error} = await supabase.from('users').select('*, assignments(courses(code), sections(name))').eq('role', 'ta'); console.log(error ? error.message : 'OK'); } t();  

@@ -1,0 +1,47 @@
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url "https://plugins.gradle.org/m2/" }
+        maven { url "https://repo1.maven.org/maven2/" }
+        maven { url "https://repository.jboss.org/nexus/content/repositories/releases/" }
+    }
+}
+
+subprojects {
+    project.evaluationDependsOn(":app")
+}
+
+subprojects {
+    // Define properties that legacy plugins look for
+    project.ext.compileSdkVersion = 35
+    project.ext.minSdkVersion = 25
+    project.ext.targetSdkVersion = 35
+
+    // Mock the 'flutter' object for legacy plugins
+    project.ext.flutter = [
+        compileSdkVersion: 35,
+        minSdkVersion: 25,
+        targetSdkVersion: 35
+    ]
+
+    // Global task override for Java/Kotlin compilation to 11
+    tasks.withType(JavaCompile) {
+        sourceCompatibility = "11"
+        targetCompatibility = "11"
+    }
+    
+    // Patch library plugins that are missing namespace
+    pluginManager.withPlugin('com.android.library') {
+        if (project.name == "app") return
+        android {
+            if (namespace == null) {
+                namespace "com.example.${project.name.replaceAll('[^a-zA-Z0-9]', '_')}"
+            }
+        }
+    }
+}
+
+tasks.register("clean", Delete) {
+    delete rootProject.buildDir
+}
