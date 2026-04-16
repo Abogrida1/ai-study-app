@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { deleteCourse, updateCourse } from '@/app/actions/courses';
+import { supabase } from '@/lib/supabase';
+import { convertToWebP } from '@/lib/image-utils';
 
 export default function CoursesTableClient({ courses, levels }: any) {
   const [editingCourse, setEditingCourse] = useState<any>(null);
@@ -15,7 +17,10 @@ export default function CoursesTableClient({ courses, levels }: any) {
     level_id: '',
     semester: 1,
     has_sections: false,
+    thumbnail_url: '',
   });
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   const openEditModal = (course: any) => {
@@ -28,6 +33,7 @@ export default function CoursesTableClient({ courses, levels }: any) {
       level_id: course.level_id || '',
       semester: course.semester || 1,
       has_sections: !!course.has_sections,
+      thumbnail_url: course.thumbnail_url || '',
     });
   };
 
@@ -159,6 +165,88 @@ export default function CoursesTableClient({ courses, levels }: any) {
                     <span className="text-sm font-bold text-on-surface">يوجد سكاشن عملي؟</span>
                   </label>
                 </div>
+              </div>
+
+              {/* Thumbnail Section */}
+              <div className="bg-surface-container-low p-4 rounded-2xl border border-outline-variant/10">
+                <div className="flex items-center justify-between mb-4">
+                  <label className="text-xs font-bold text-on-surface">صورة غلاف المادة (Thumbnail)</label>
+                  {isUploading && <span className="text-[10px] text-primary animate-pulse font-bold">جاري التحميل...</span>}
+                </div>
+                
+                <div className="flex gap-4 items-center">
+                  <div className="w-24 h-24 rounded-2xl bg-surface-container-highest overflow-hidden border border-outline-variant/20 flex-shrink-0">
+                    {formData.thumbnail_url ? (
+                      <img src={formData.thumbnail_url} alt="Course" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-on-surface-variant/30">
+                        <span className="material-symbols-outlined text-3xl">image</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex-1 space-y-2">
+                    <p className="text-[10px] text-on-surface-variant leading-relaxed">
+                      يفضل اختيار صورة واضحة تعبر عن المادة. سيتم تحويلها لـ WebP تلقائياً لسرعة التصفح.
+                    </p>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
+                        className="px-4 py-2 bg-primary/10 text-primary text-xs font-bold rounded-lg hover:bg-primary/20 transition-colors flex items-center gap-1"
+                      >
+                        <span className="material-symbols-outlined text-sm">upload</span>
+                        {formData.thumbnail_url ? 'تغيير الصورة' : 'رفع صورة'}
+                      </button>
+                      {formData.thumbnail_url && (
+                        <button 
+                          onClick={() => setFormData({...formData, thumbnail_url: ''})}
+                          className="px-4 py-2 bg-error/10 text-error text-xs font-bold rounded-lg hover:bg-error/20 transition-colors"
+                        >
+                          إزالة
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  className="hidden" 
+                  accept="image/*"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    
+                    setIsUploading(true);
+                    try {
+                      // 1. Convert to WebP
+                      const webpBlob = await convertToWebP(file);
+                      
+                      // 2. Upload to Supabase Storage
+                      const fileName = `${Date.now()}_${file.name.split('.')[0]}.webp`;
+                      const { data, error } = await supabase.storage
+                        .from('courses') // Bucket name
+                        .upload(`thumbnails/${fileName}`, webpBlob, {
+                          contentType: 'image/webp'
+                        });
+                        
+                      if (error) throw error;
+                      
+                      // 3. Get Public URL
+                      const { data: { publicUrl } } = supabase.storage
+                        .from('courses')
+                        .getPublicUrl(data.path);
+                        
+                      setFormData({ ...formData, thumbnail_url: publicUrl });
+                    } catch (err: any) {
+                      alert("خطأ في رفع الصورة: " + err.message);
+                    } finally {
+                      setIsUploading(false);
+                    }
+                  }}
+                />
               </div>
             </div>
             

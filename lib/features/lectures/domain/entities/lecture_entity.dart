@@ -5,8 +5,8 @@ class LectureEntity extends Equatable {
   final String title;
   final String titleAr;
   final String? description;
-  final String? videoUrl;
-  final String? pdfUrl;
+  final String? thumbnailUrl;
+  final List<Map<String, dynamic>> materials;
   final int order;
   final int? durationMinutes;
   final bool isPublished;
@@ -18,8 +18,8 @@ class LectureEntity extends Equatable {
     required this.title,
     required this.titleAr,
     this.description,
-    this.videoUrl,
-    this.pdfUrl,
+    this.thumbnailUrl,
+    required this.materials,
     required this.order,
     this.durationMinutes,
     required this.isPublished,
@@ -28,5 +28,17 @@ class LectureEntity extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, title, titleAr, description, videoUrl, pdfUrl, order, durationMinutes, isPublished, createdAt, creatorName];
+  List<Object?> get props => [
+        id,
+        title,
+        titleAr,
+        description,
+        thumbnailUrl,
+        materials,
+        order,
+        durationMinutes,
+        isPublished,
+        createdAt,
+        creatorName,
+      ];
 }

@@ -6,8 +6,8 @@ class LectureModel extends LectureEntity {
     required super.title,
     required super.titleAr,
     super.description,
-    super.videoUrl,
-    super.pdfUrl,
+    super.thumbnailUrl,
+    required super.materials,
     required super.order,
     super.durationMinutes,
     required super.isPublished,
@@ -21,13 +21,25 @@ class LectureModel extends LectureEntity {
       title: json['title'] ?? '',
       titleAr: json['title_ar'] ?? '',
       description: json['description'],
-      videoUrl: json['video_url'],
-      pdfUrl: json['pdf_url'],
+      thumbnailUrl: json['thumbnail_url'],
+      materials: (json['materials'] as List<dynamic>?)
+              ?.map((e) => Map<String, dynamic>.from(e as Map))
+              .toList() ??
+          [],
       order: json['order'] ?? 0,
       durationMinutes: json['duration_minutes'],
       isPublished: json['is_published'] ?? false,
       createdAt: json['created_at'] ?? '',
       creatorName: json['creator']?['full_name'] ?? 'Unknown',
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'title_ar': titleAr,
+      'thumbnail_url': thumbnailUrl,
+      'materials': materials,
+      'is_published': isPublished,
+    };
   }
 }

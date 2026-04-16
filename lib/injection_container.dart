@@ -17,7 +17,12 @@ import 'features/courses/domain/repositories/course_repository.dart';
 import 'features/courses/domain/usecases/get_enrolled_courses_usecase.dart';
 import 'features/courses/domain/usecases/get_assigned_courses_usecase.dart';
 import 'features/courses/presentation/cubit/course_cubit.dart';
+import 'features/courses/presentation/cubit/grades_cubit.dart';
+import 'features/courses/data/datasources/grades_remote_data_source.dart';
+import 'features/courses/presentation/cubit/attendance_cubit.dart';
+import 'features/courses/data/datasources/attendance_remote_data_source.dart';
 import 'features/chat/presentation/cubit/chat_cubit.dart';
+import 'features/lectures/presentation/cubit/lecture_cubit.dart';
 
 // Features - Chat
 import 'features/chat/data/datasources/chat_remote_data_source.dart';
@@ -64,6 +69,15 @@ Future<void> init() async {
   sl.registerLazySingleton(() => GetAssignedCoursesUseCase(sl()));
   sl.registerLazySingleton<CourseRepository>(() => CourseRepositoryImpl(remoteDataSource: sl()));
   sl.registerLazySingleton<CourseRemoteDataSource>(() => CourseRemoteDataSourceImpl(supabaseClient: sl()));
+
+  // Grades & Attendance
+  sl.registerFactory(() => GradesCubit(dataSource: sl()));
+  sl.registerLazySingleton<GradesRemoteDataSource>(() => GradesRemoteDataSourceImpl(supabaseClient: sl()));
+  sl.registerFactory(() => AttendanceCubit(dataSource: sl()));
+  sl.registerLazySingleton<AttendanceRemoteDataSource>(() => AttendanceRemoteDataSourceImpl(supabaseClient: sl()));
+  
+  // Lectures Cubit
+  sl.registerFactory(() => LectureCubit(repository: sl()));
 
   // Chat
   sl.registerFactory(() => ChatCubit());

@@ -1,5 +1,5 @@
 import React from 'react';
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import StudentsTableClient from './StudentsTableClient';

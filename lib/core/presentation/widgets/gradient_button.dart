@@ -19,19 +19,23 @@ class GradientButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: colors ?? [colorScheme.primary, colorScheme.primaryContainer],
+          colors: colors ?? [
+            colorScheme.primary,
+            isDark ? colorScheme.primaryContainer.withOpacity(0.8) : colorScheme.primaryContainer,
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(100),
         boxShadow: [
           BoxShadow(
-            color: (colors?.first ?? colorScheme.primary).withOpacity(0.3),
+            color: (colors?.first ?? colorScheme.primary).withOpacity(isDark ? 0.2 : 0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),

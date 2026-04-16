@@ -181,12 +181,15 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
     final textTheme = Theme.of(context).textTheme;
     final isArabic = context.watch<LanguageCubit>().isArabic;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(20.0),
       decoration: BoxDecoration(
-        color: colorScheme.primaryContainer.withOpacity(0.4),
+        color: isDark ? colorScheme.surfaceContainerHigh.withOpacity(0.5) : colorScheme.primaryContainer.withOpacity(0.1),
         borderRadius: BorderRadius.circular(16),
+        border: isDark ? Border.all(color: colorScheme.primary.withOpacity(0.2)) : null,
       ),
       child: Row(
         children: [

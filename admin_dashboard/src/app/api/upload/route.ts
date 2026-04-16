@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 
 // ============================================
 // API Route: POST /api/upload

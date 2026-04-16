@@ -1,6 +1,6 @@
 'use server';
 
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { revalidatePath } from 'next/cache';
 
 export async function deleteCourse(courseId: string) {
@@ -25,6 +25,7 @@ export async function updateCourse(courseId: string, data: any) {
       has_sections: data.has_sections,
       semester: parseInt(data.semester),
       level_id: data.level_id || null,
+      thumbnail_url: data.thumbnail_url || null,
     }).eq('id', courseId);
 
     if (error) throw new Error(error.message);

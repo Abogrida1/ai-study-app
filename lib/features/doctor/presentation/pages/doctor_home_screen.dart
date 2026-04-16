@@ -6,6 +6,7 @@ import '../../../courses/presentation/cubit/course_cubit.dart';
 import '../../../courses/presentation/cubit/course_state.dart';
 import '../../../../core/presentation/widgets/modern_card.dart';
 import '../../../../core/presentation/widgets/gradient_button.dart';
+import 'doctor_course_details_screen.dart';
 
 class DoctorHomeScreen extends StatefulWidget {
   const DoctorHomeScreen({super.key});
@@ -119,31 +120,65 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                             children: courses.asMap().entries.map((entry) {
                                final index = entry.key;
                                final course = entry.value;
-                               final colors = [const Color(0xFFE3F2FD), const Color(0xFFFFF8E1), const Color(0xFFFFEBEE)];
-                               final iconColors = [colorScheme.primary, Colors.amber.shade900, Colors.red];
+                               // Color palette that adapts to Dark Mode
+                               final isDark = Theme.of(context).brightness == Brightness.dark;
+                               final List<Color> cardColors = isDark 
+                                 ? [
+                                     colorScheme.surfaceContainerHigh.withOpacity(0.5),
+                                     colorScheme.surfaceContainerHigh.withOpacity(0.5),
+                                     colorScheme.surfaceContainerHigh.withOpacity(0.5),
+                                   ]
+                                 : [
+                                     const Color(0xFFE3F2FD), 
+                                     const Color(0xFFFFF8E1), 
+                                     const Color(0xFFFFEBEE)
+                                   ];
+                               
+                               final List<Color> accentColors = [
+                                 colorScheme.primary, 
+                                 isDark ? Colors.amber.shade300 : Colors.amber.shade900, 
+                                 isDark ? Colors.red.shade300 : Colors.red.shade700
+                               ];
+                               
+                               final cardColor = cardColors[index % cardColors.length];
+                               final accentColor = accentColors[index % accentColors.length];
                                
                                return Padding(
                                  padding: const EdgeInsets.only(bottom: 12),
                                  child: ModernCard(
                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                   color: colors[index % colors.length],
+                                   color: cardColor,
                                    child: ListTile(
                                       contentPadding: EdgeInsets.zero,
                                       leading: Container(
                                         width: 48, height: 48,
-                                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-                                        child: Icon(Icons.auto_stories, color: iconColors[index % iconColors.length]),
+                                        decoration: BoxDecoration(
+                                          color: isDark ? colorScheme.surface : Colors.white, 
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: isDark ? Border.all(color: accentColor.withOpacity(0.3)) : null,
+                                        ),
+                                        child: Icon(Icons.auto_stories, color: accentColor),
                                       ),
                                       title: Text(
                                         course.name, 
-                                        style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold, color: colorScheme.primary),
+                                        style: textTheme.titleSmall?.copyWith(
+                                          fontWeight: FontWeight.bold, 
+                                          color: isDark ? colorScheme.onSurface : colorScheme.primary,
+                                        ),
                                       ),
                                       subtitle: Text(
                                         course.nameAr ?? course.code ?? '', 
-                                        style: textTheme.labelSmall?.copyWith(fontSize: 10, color: colorScheme.onSurfaceVariant.withOpacity(0.6)),
+                                        style: textTheme.labelSmall?.copyWith(
+                                          fontSize: 10, 
+                                          color: colorScheme.onSurfaceVariant.withOpacity(0.8),
+                                        ),
                                       ),
-                                      trailing: Icon(Icons.arrow_forward_ios, size: 14, color: colorScheme.outlineVariant),
-                                      onTap: () {},
+                                      trailing: Icon(Icons.arrow_forward_ios, size: 14, color: accentColor.withOpacity(0.5)),
+                                      onTap: () {
+                                        Navigator.push(context, MaterialPageRoute(
+                                          builder: (_) => DoctorCourseDetailsScreen(course: course),
+                                        ));
+                                      },
                                    ),
                                  ),
                                );
