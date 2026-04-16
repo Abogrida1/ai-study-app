@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../../../core/app_localizations.dart';
+import '../../../../core/cubit/language_cubit.dart';
+import '../../../../core/cubit/auth_cubit.dart';
+import '../../../../core/cubit/auth_state.dart';
+import '../../../courses/presentation/cubit/course_cubit.dart';
+import '../../../courses/presentation/cubit/course_state.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'subject_details_screen.dart';
-
 class SubjectsScreen extends StatelessWidget {
   const SubjectsScreen({super.key});
 
@@ -112,37 +117,45 @@ class SubjectsScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 48),
-            _buildSubjectCard(
-              context,
-              imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBcV2JQzIr4AAGIQnG-FEeujZbkbW62yohyEp5OGlRHPl04-vBZShXLWxcwOjmi2LX3eQEhRSoSloJqezrQx7_Gr3SjJs6miXUsn6lPSL9naIXyBgwyU1pKxmUlmfuRRvzuGy7nCdmPDjaL6O_busVhK8L3HH3rq1OuEXPWfAbL2Bp6GnGV1PSSWP4s_PGOWF88DKoOx1Fa2TQdx062Ucok-cP-cXD1_EabH2SkE47IEaytqR_21-mwn2g0-PJLWOpCate1NpJEPTsK',
-              tag: 'SCIENCE',
-              title: 'Molecular Genetics',
-              professor: 'Dr. Elena Sterling',
-              progress: 0.74,
-              isBookmarked: true,
-            ),
-            const SizedBox(height: 24),
-            _buildSubjectCard(
-              context,
-              imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA_E9J91iPG7uCMLPbTLpVfVif-iXRibyIX5qVtulu7NPxoZtNDtZSptVK0dBR9CsLPofAPcCsjCnBilOpOyHFnDqT5v7gS7fRUjqRpIuXkIxzAiJfaSsrrap-bHdbmxNQstOaJnKT7cYnh5BtC53tZk24FU-SaR5sNDBtgCxG6iQq-08Nmkn9kaSx5z4eIbqURaAZFgfd8dbDvZFNVw92w44TxGavhPUz2zw0ydXiPPQBpOcd0quQzxxCTFcYSlsbM3WoTWOUsUQ_-',
-              tag: 'HUMANITIES',
-              title: 'Classical Philosophy',
-              professor: 'Prof. Julian Thorne',
-              progress: 0.42,
-              isBookmarked: false,
-              isInverted: true,
-              tagColor: colorScheme.tertiaryContainer,
-              tagLabelColor: colorScheme.onTertiaryContainer,
-            ),
-            const SizedBox(height: 24),
-            _buildSubjectCard(
-              context,
-              imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAhMUiXc9pBJmMDwDDSVFoN6ROHXyDPJp_p4CQM8VVtkE2NawcKFjT5UZnizerp_Ay9wzqauoTlqYMr7pGAgdwMbeU0ipqVIZEqtiVjIzCYtsjItHWHUsjG3W23aXIMy0pQZqzfPJuQP1lwIdGOHk78CGOfsOs2qdc4m-J__rQtzfXXMnT-8b-mwL9H7efn9U7wutXfVH5W-kZ1kf3w46OW6awlfTFMx3TOxNOkjt0Qd3kjs4JjgBB93092jR_Dn2qbAn6__EgVv8eX',
-              tag: 'MATHEMATICS',
-              title: 'Quantum Mechanics',
-              professor: 'Dr. Sarah Chen',
-              progress: 0.89,
-              isBookmarked: false,
+            BlocBuilder<AuthCubit, AuthState>(
+              builder: (context, authState) {
+                if (authState is AuthAuthenticated) {
+                  return BlocBuilder<CourseCubit, CourseState>(
+                    builder: (context, courseState) {
+                      if (courseState is CourseInitial) {
+                        context.read<CourseCubit>().fetchEnrolledCourses(authState.userId!);
+                        return const Center(child: CircularProgressIndicator());
+                      } else if (courseState is CourseLoading) {
+                        return const Center(child: CircularProgressIndicator());
+                      } else if (courseState is EnrolledCoursesLoaded) {
+                        if (courseState.courses.isEmpty) {
+                          return Center(child: Text(l10n.translate('no_data') ?? 'No subjects found.'));
+                        }
+                        return Column(
+                          children: courseState.courses.map((course) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 24.0),
+                              child: _buildSubjectCard(
+                                context,
+                                imageUrl: course.thumbnailUrl ?? 'https://lh3.googleusercontent.com/aida-public/AB6AXuBcV2JQzIr4AAGIQnG-FEeujZbkbW62yohyEp5OGlRHPl04-vBZShXLWxcwOjmi2LX3eQEhRSoSloJqezrQx7_Gr3SjJs6miXUsn6lPSL9naIXyBgwyU1pKxmUlmfuRRvzuGy7nCdmPDjaL6O_busVhK8L3HH3rq1OuEXPWfAbL2Bp6GnGV1PSSWP4s_PGOWF88DKoOx1Fa2TQdx062Ucok-cP-cXD1_EabH2SkE47IEaytqR_21-mwn2g0-PJLWOpCate1NpJEPTsK',
+                                tag: course.code,
+                                title: context.read<LanguageCubit>().isArabic ? course.nameAr : course.name,
+                                professor: 'Professor',
+                                progress: 0.0,
+                                isBookmarked: false,
+                              ),
+                            );
+                          }).toList(),
+                        );
+                      } else if (courseState is CourseError) {
+                        return Center(child: Text(courseState.message));
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  );
+                }
+                return const SizedBox.shrink();
+              },
             ),
             const SizedBox(height: 48),
             Container(
