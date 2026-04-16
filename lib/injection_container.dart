@@ -15,6 +15,7 @@ import 'features/courses/data/datasources/course_remote_data_source.dart';
 import 'features/courses/data/repositories/course_repository_impl.dart';
 import 'features/courses/domain/repositories/course_repository.dart';
 import 'features/courses/domain/usecases/get_enrolled_courses_usecase.dart';
+import 'features/courses/domain/usecases/get_assigned_courses_usecase.dart';
 import 'features/courses/presentation/cubit/course_cubit.dart';
 import 'features/chat/presentation/cubit/chat_cubit.dart';
 
@@ -55,8 +56,12 @@ Future<void> init() async {
   sl.registerLazySingleton<AuthRemoteDataSource>(() => AuthRemoteDataSourceImpl(supabaseClient: sl()));
 
   // Courses
-  sl.registerFactory(() => CourseCubit(getEnrolledCoursesUseCase: sl()));
+  sl.registerFactory(() => CourseCubit(
+    getEnrolledCoursesUseCase: sl(),
+    getAssignedCoursesUseCase: sl(),
+  ));
   sl.registerLazySingleton(() => GetEnrolledCoursesUseCase(sl()));
+  sl.registerLazySingleton(() => GetAssignedCoursesUseCase(sl()));
   sl.registerLazySingleton<CourseRepository>(() => CourseRepositoryImpl(remoteDataSource: sl()));
   sl.registerLazySingleton<CourseRemoteDataSource>(() => CourseRemoteDataSourceImpl(supabaseClient: sl()));
 

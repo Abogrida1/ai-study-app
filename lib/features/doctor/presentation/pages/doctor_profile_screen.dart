@@ -13,8 +13,24 @@ import '../../../../core/presentation/widgets/section_header.dart';
 import '../../../courses/presentation/cubit/course_cubit.dart';
 import '../../../courses/presentation/cubit/course_state.dart';
 
-class DoctorProfileScreen extends StatelessWidget {
+class DoctorProfileScreen extends StatefulWidget {
   const DoctorProfileScreen({super.key});
+
+  @override
+  State<DoctorProfileScreen> createState() => _DoctorProfileScreenState();
+}
+
+class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authState = context.read<AuthCubit>().state;
+      if (authState is AuthAuthenticated) {
+        context.read<CourseCubit>().fetchAssignedCourses(authState.userId!);
+      }
+    });
+  }
 
   Future<void> _pickAndUploadImage(BuildContext context) async {
     final picker = ImagePicker();
@@ -64,7 +80,6 @@ class DoctorProfileScreen extends StatelessWidget {
           }
 
           final profile = authState.profile;
-          final userId = authState.userId;
 
           return SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
@@ -106,11 +121,7 @@ class DoctorProfileScreen extends StatelessWidget {
                 
                 BlocBuilder<CourseCubit, CourseState>(
                   builder: (context, courseState) {
-                    if (courseState is CourseInitial) {
-                      context.read<CourseCubit>().fetchEnrolledCourses(userId!);
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (courseState is CourseLoading) {
+                    if (courseState is CourseLoading || courseState is CourseInitial) {
                       return const Center(child: CircularProgressIndicator());
                     }
                     if (courseState is EnrolledCoursesLoaded) {
@@ -122,7 +133,7 @@ class DoctorProfileScreen extends StatelessWidget {
                         children: courses.map((course) => _buildCourseCard(context, course)).toList(),
                       );
                     }
-                    return _buildErrorState(context, 'حدث خطأ أثناء تحميل المواد');
+                    return _buildEmptyState(context, 'لا يوجد مواد مسندة إليك حالياً.');
                   },
                 ),
 
@@ -217,18 +228,4 @@ class DoctorProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildErrorState(BuildContext context, String message) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: colorScheme.errorContainer.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Center(
-        child: Text(message, style: textTheme.bodyLarge?.copyWith(color: colorScheme.onErrorContainer)),
-      ),
-    );
-  }
 }

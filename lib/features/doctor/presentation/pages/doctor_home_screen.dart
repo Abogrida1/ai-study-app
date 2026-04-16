@@ -7,8 +7,24 @@ import '../../../courses/presentation/cubit/course_state.dart';
 import '../../../../core/presentation/widgets/modern_card.dart';
 import '../../../../core/presentation/widgets/gradient_button.dart';
 
-class DoctorHomeScreen extends StatelessWidget {
+class DoctorHomeScreen extends StatefulWidget {
   const DoctorHomeScreen({super.key});
+
+  @override
+  State<DoctorHomeScreen> createState() => _DoctorHomeScreenState();
+}
+
+class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authState = context.read<AuthCubit>().state;
+      if (authState is AuthAuthenticated) {
+        context.read<CourseCubit>().fetchAssignedCourses(authState.userId!);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +38,6 @@ class DoctorHomeScreen extends StatelessWidget {
         }
 
         final profile = authState.profile;
-        final userId = authState.userId;
 
         return Scaffold(
           backgroundColor: colorScheme.surface,
@@ -66,8 +81,17 @@ class DoctorHomeScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-                    // Hero Section
-                    _buildHeroSection(context, profile['full_name'] ?? 'Doctor'),
+                    BlocBuilder<CourseCubit, CourseState>(
+                      builder: (context, courseState) {
+                        String firstCourse = 'No Active Session';
+                        String firstCourseSubtitle = 'Check your schedule';
+                        if (courseState is EnrolledCoursesLoaded && courseState.courses.isNotEmpty) {
+                          firstCourse = 'Start Live Session';
+                          firstCourseSubtitle = '${courseState.courses.first.name} - ${courseState.courses.first.code}';
+                        }
+                        return _buildHeroSection(context, profile['full_name'] ?? 'Doctor', firstCourse, firstCourseSubtitle);
+                      },
+                    ),
                     const SizedBox(height: 32),
 
                     // My Assigned Sections
@@ -80,12 +104,11 @@ class DoctorHomeScreen extends StatelessWidget {
                     
                     BlocBuilder<CourseCubit, CourseState>(
                       builder: (context, courseState) {
-                        if (courseState is CourseInitial) {
-                          context.read<CourseCubit>().fetchEnrolledCourses(userId!);
+                        if (courseState is CourseLoading || courseState is CourseInitial) {
                           return const Center(child: CircularProgressIndicator());
                         }
-                        if (courseState is CourseLoading) {
-                          return const Center(child: CircularProgressIndicator());
+                        if (courseState is CourseError) {
+                          return _buildEmptyState(context, 'لا يوجد مواد مسندة حالياً');
                         }
                         if (courseState is EnrolledCoursesLoaded) {
                           final courses = courseState.courses;
@@ -111,8 +134,14 @@ class DoctorHomeScreen extends StatelessWidget {
                                         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
                                         child: Icon(Icons.auto_stories, color: iconColors[index % iconColors.length]),
                                       ),
-                                      title: Text(course.name, style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold, color: colorScheme.primary)),
-                                      subtitle: Text(course.code ?? '', style: textTheme.labelSmall?.copyWith(fontSize: 10, color: colorScheme.onSurfaceVariant.withOpacity(0.6))),
+                                      title: Text(
+                                        course.name, 
+                                        style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold, color: colorScheme.primary),
+                                      ),
+                                      subtitle: Text(
+                                        course.nameAr ?? course.code ?? '', 
+                                        style: textTheme.labelSmall?.copyWith(fontSize: 10, color: colorScheme.onSurfaceVariant.withOpacity(0.6)),
+                                      ),
                                       trailing: Icon(Icons.arrow_forward_ios, size: 14, color: colorScheme.outlineVariant),
                                       onTap: () {},
                                    ),
@@ -157,7 +186,7 @@ class DoctorHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeroSection(BuildContext context, String name) {
+  Widget _buildHeroSection(BuildContext context, String name, String sessionTitle, String sessionSubtitle) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
@@ -192,8 +221,8 @@ class DoctorHomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               GradientButton(
-                text: 'Start Live Session',
-                subtitle: 'Quantum Mechanics I - Year 3',
+                text: sessionTitle,
+                subtitle: sessionSubtitle,
                 icon: Icons.play_circle_fill,
                 onTap: () {},
               ),

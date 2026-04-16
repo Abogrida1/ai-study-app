@@ -45,6 +45,7 @@ class GradientButton extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             child: Row(
+              mainAxisSize: MainAxisSize.max,
               children: [
                 if (icon != null) ...[
                   Icon(icon, color: Colors.white, size: 28),
@@ -57,6 +58,8 @@ class GradientButton extends StatelessWidget {
                     children: [
                       Text(
                         text,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w800,
@@ -66,6 +69,8 @@ class GradientButton extends StatelessWidget {
                       if (subtitle != null)
                         Text(
                           subtitle!,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.8),
                             fontSize: 11,

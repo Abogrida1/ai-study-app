@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/course_model.dart';
 import '../../../../core/error/failures.dart';
@@ -42,13 +43,25 @@ class CourseRemoteDataSourceImpl implements CourseRemoteDataSource {
   @override
   Future<List<CourseModel>> getAssignedCourses(String userId) async {
     try {
+      debugPrint('🔍 [getAssignedCourses] userId=$userId');
+
       final response = await supabaseClient
           .from('assignments')
           .select('course:courses (*)')
           .eq('user_id', userId);
-          
-      return (response as List).map((e) => CourseModel.fromJson(e['course'])).toList();
+
+      debugPrint('🔍 [getAssignedCourses] raw response: $response');
+      debugPrint('🔍 [getAssignedCourses] row count: ${(response as List).length}');
+
+      final courses = response
+          .where((e) => e['course'] != null)
+          .map((e) => CourseModel.fromJson(e['course']))
+          .toList();
+
+      debugPrint('🔍 [getAssignedCourses] courses after filter: ${courses.length}');
+      return courses;
     } catch (e) {
+      debugPrint('❌ [getAssignedCourses] ERROR: $e');
       throw ServerFailure(e.toString());
     }
   }
