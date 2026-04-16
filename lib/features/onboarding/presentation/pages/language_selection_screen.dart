@@ -1,7 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../../../core/language_provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/cubit/language_cubit.dart';
 import 'onboarding_1_campus_guide.dart';
 
 class LanguageSelectionScreen extends StatefulWidget {
@@ -16,6 +16,7 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ... rest of code unchanged except changing the button click
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -220,9 +221,9 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
                         ElevatedButton(
                           onPressed: () {
                             if (selectedLanguage == 'AR') {
-                              context.read<LanguageProvider>().setLocale(const Locale('ar'));
+                              context.read<LanguageCubit>().setLocale(const Locale('ar'));
                             } else {
-                              context.read<LanguageProvider>().setLocale(const Locale('en'));
+                              context.read<LanguageCubit>().setLocale(const Locale('en'));
                             }
                             
                             // Navigate to onboarding

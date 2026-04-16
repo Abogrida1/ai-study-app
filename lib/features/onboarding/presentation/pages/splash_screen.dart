@@ -1,13 +1,15 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'language_selection_screen.dart';
-import '../../../../core/auth_service.dart';
+
 import '../../../student/presentation/pages/student_shell.dart';
 import '../../../doctor/presentation/pages/doctor_shell.dart';
 import '../../../assistant/presentation/pages/assistant_shell.dart';
-import '../../../../core/user_provider.dart';
-import 'package:provider/provider.dart';
+import '../../../../core/cubit/auth_cubit.dart';
+import '../../../../core/cubit/auth_state.dart';
+import '../../../../core/supabase_client.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -17,8 +19,6 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  final _authService = AuthService();
-
   @override
   void initState() {
     super.initState();
@@ -32,14 +32,18 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     final navigator = Navigator.of(context);
+    final authCubit = context.read<AuthCubit>();
 
     // 1. Check if user is logged in
-    if (_authService.isAuthenticated) {
+    if (supabase.auth.currentUser != null) {
       // 2. Load the global user profile!
-      final userProvider = context.read<UserProvider>();
-      await userProvider.loadProfile();
+      await authCubit.loadProfile();
       
-      final role = userProvider.role ?? await _authService.getUserRole();
+      String? role;
+      final state = authCubit.state;
+      if (state is AuthAuthenticated) {
+        role = state.role;
+      }
       
       if (!mounted) return;
 

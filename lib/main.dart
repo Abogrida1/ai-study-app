@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'core/theme_provider.dart';
-import 'core/language_provider.dart';
+import 'core/cubit/theme_cubit.dart';
+import 'core/cubit/language_cubit.dart';
+import 'core/cubit/auth_cubit.dart';
 import 'core/app_localizations.dart';
 import 'core/theme.dart';
-import 'core/auth_service.dart';
-import 'core/user_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'features/onboarding/presentation/pages/splash_screen.dart';
+import 'injection_container.dart' as di;
+
+import 'features/courses/presentation/cubit/course_cubit.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,13 +20,15 @@ void main() async {
     anonKey: 'sb_publishable_ajFGoPlO_g2p2UASEBslNg_wzi4pwuU',
   );
   
+  await di.init(); // Initialize Dependency Injection
+  
   runApp(
-    MultiProvider(
+    MultiBlocProvider(
       providers: [
-        Provider<AuthService>(create: (_) => AuthService()),
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),
-        ChangeNotifierProvider(create: (_) => LanguageProvider()),
-        ChangeNotifierProvider(create: (_) => UserProvider()),
+        BlocProvider<ThemeCubit>(create: (_) => ThemeCubit()),
+        BlocProvider<LanguageCubit>(create: (_) => LanguageCubit()),
+        BlocProvider<AuthCubit>(create: (_) => di.sl<AuthCubit>()),
+        BlocProvider<CourseCubit>(create: (_) => di.sl<CourseCubit>()),
       ],
       child: const TheScholarApp(),
     ),
@@ -36,26 +40,32 @@ class TheScholarApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final languageProvider = context.watch<LanguageProvider>();
-    
-    return MaterialApp(
-      title: 'The Scholar',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(languageProvider.locale),
-      darkTheme: AppTheme.dark(languageProvider.locale),
-      themeMode: context.watch<ThemeProvider>().themeMode,
-      locale: languageProvider.locale,
-      supportedLocales: const [
-        Locale('en', ''),
-        Locale('ar', ''),
-      ],
-      localizationsDelegates: const [
-        AppLocalizationsDelegate(),
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      home: const SplashScreen(),
+    return BlocBuilder<LanguageCubit, Locale>(
+      builder: (context, locale) {
+        return BlocBuilder<ThemeCubit, ThemeMode>(
+          builder: (context, themeMode) {
+            return MaterialApp(
+              title: 'The Scholar',
+              debugShowCheckedModeBanner: false,
+              theme: AppTheme.light(locale),
+              darkTheme: AppTheme.dark(locale),
+              themeMode: themeMode,
+              locale: locale,
+              supportedLocales: const [
+                Locale('en', ''),
+                Locale('ar', ''),
+              ],
+              localizationsDelegates: const [
+                AppLocalizationsDelegate(),
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              home: const SplashScreen(),
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -66,9 +76,9 @@ class FoundationShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = context.read<ThemeProvider>();
-    final langProvider = context.read<LanguageProvider>();
-    final isArabic = langProvider.isArabic;
+    final themeCubit = context.read<ThemeCubit>();
+    final langCubit = context.read<LanguageCubit>();
+    final isArabic = langCubit.isArabic;
 
     return Scaffold(
       appBar: AppBar(
@@ -109,14 +119,18 @@ class FoundationShell extends StatelessWidget {
                 runSpacing: 16,
                 alignment: WrapAlignment.center,
                 children: [
-                  ElevatedButton.icon(
-                    onPressed: () => themeProvider.cycleTheme(),
-                    icon: Icon(themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode),
-                    label: Text(isArabic ? 'تبديل الوضع' : 'Toggle Theme'),
-                  ),
+                   BlocBuilder<ThemeCubit, ThemeMode>(
+                     builder: (context, themeMode) {
+                       return ElevatedButton.icon(
+                         onPressed: () => themeCubit.cycleTheme(),
+                         icon: Icon(themeMode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode),
+                         label: Text(isArabic ? 'تبديل الوضع' : 'Toggle Theme'),
+                       );
+                     }
+                   ),
                   ElevatedButton.icon(
                     onPressed: () {
-                      langProvider.setLocale(isArabic ? const Locale('en') : const Locale('ar'));
+                      langCubit.setLocale(isArabic ? const Locale('en') : const Locale('ar'));
                     },
                     icon: const Icon(Icons.language),
                     label: Text(isArabic ? 'English' : 'العربية'),
@@ -130,3 +144,4 @@ class FoundationShell extends StatelessWidget {
     );
   }
 }
+
