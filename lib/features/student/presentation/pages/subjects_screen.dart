@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../../../core/app_localizations.dart';
+import '../../../../core/constants.dart';
 import '../../../../core/cubit/language_cubit.dart';
 import '../../../../core/cubit/auth_cubit.dart';
 import '../../../../core/cubit/auth_state.dart';
+import '../../../../core/local_storage/pinned_courses_storage.dart';
 import '../../../courses/presentation/cubit/course_cubit.dart';
 import '../../../courses/presentation/cubit/course_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -129,7 +131,7 @@ class SubjectsScreen extends StatelessWidget {
                         return const Center(child: CircularProgressIndicator());
                       } else if (courseState is EnrolledCoursesLoaded) {
                         if (courseState.courses.isEmpty) {
-                          return Center(child: Text(l10n.translate('no_data') ?? 'No subjects found.'));
+                          return Center(child: Text(l10n.translate('no_data')));
                         }
                         return Column(
                           children: courseState.courses.map((course) {
@@ -137,12 +139,12 @@ class SubjectsScreen extends StatelessWidget {
                               padding: const EdgeInsets.only(bottom: 24.0),
                               child: _buildSubjectCard(
                                 context,
+                                courseId: course.id ?? '',
                                 imageUrl: course.thumbnailUrl ?? 'https://lh3.googleusercontent.com/aida-public/AB6AXuBcV2JQzIr4AAGIQnG-FEeujZbkbW62yohyEp5OGlRHPl04-vBZShXLWxcwOjmi2LX3eQEhRSoSloJqezrQx7_Gr3SjJs6miXUsn6lPSL9naIXyBgwyU1pKxmUlmfuRRvzuGy7nCdmPDjaL6O_busVhK8L3HH3rq1OuEXPWfAbL2Bp6GnGV1PSSWP4s_PGOWF88DKoOx1Fa2TQdx062Ucok-cP-cXD1_EabH2SkE47IEaytqR_21-mwn2g0-PJLWOpCate1NpJEPTsK',
                                 tag: course.code,
                                 title: context.read<LanguageCubit>().isArabic ? course.nameAr : course.name,
-                                professor: 'Professor',
+                                professor: course.professorName?.trim() ?? '',
                                 progress: 0.0,
-                                isBookmarked: false,
                               ),
                             );
                           }).toList(),
@@ -263,15 +265,13 @@ class SubjectsScreen extends StatelessWidget {
 
   Widget _buildSubjectCard(
     BuildContext context, {
+    required String courseId,
     required String imageUrl,
     required String tag,
     required String title,
     required String professor,
     required double progress,
-    required bool isBookmarked,
     bool isInverted = false,
-    Color? tagColor,
-    Color? tagLabelColor,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
@@ -280,129 +280,159 @@ class SubjectsScreen extends StatelessWidget {
     final bgColor = isInverted ? colorScheme.surfaceContainerHigh : colorScheme.surfaceContainerLowest;
     final textColor = colorScheme.onSurface;
 
+    String formatProfessorName(String rawName) {
+      final normalized = rawName.trim();
+      final lower = normalized.toLowerCase();
+      if (lower.startsWith('dr.') || lower.startsWith('prof.') || lower.startsWith('dr ') || lower.startsWith('prof ')) {
+        return normalized;
+      }
+      return 'Dr. $normalized';
+    }
+
+    final professorLabel = professor.isNotEmpty ? formatProfessorName(professor) : 'Dr. TBD';
+
     return GestureDetector(
       onTap: () {
         Navigator.push(context, MaterialPageRoute(builder: (context) => const SubjectDetailsScreen()));
       },
-      child: Container(
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Stack(
-              children: [
-                Container(
-                  height: 180,
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
-                    image: DecorationImage(
-                      image: NetworkImage(imageUrl),
-                      fit: BoxFit.cover,
+      child: StatefulBuilder(
+        builder: (context, setState) {
+          return FutureBuilder<bool>(
+            future: PinnedCoursesStorage.isPinned(courseId),
+            builder: (context, snapshot) {
+              final isBookmarked = snapshot.data ?? false;
+              
+              return Container(
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
                     ),
-                  ),
+                  ],
                 ),
-                Positioned(
-                  top: 16,
-                  right: 16,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: isBookmarked ? colorScheme.primary : Colors.white.withOpacity(0.9),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                      size: 20,
-                      color: isBookmarked ? colorScheme.onPrimary : const Color(0xFF64748B),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 16,
-                  left: 16,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.4),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      tag,
-                      style: textTheme.labelSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: textTheme.headlineMedium?.copyWith(
-                      fontSize: 24,
-                      color: textColor,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    professor,
-                    style: textTheme.bodyLarge?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Progress',
-                        style: textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: colorScheme.onSurfaceVariant,
+                child: Column(
+                  children: [
+                    Stack(
+                      children: [
+                        Container(
+                          height: 180,
+                          decoration: BoxDecoration(
+                            borderRadius: const BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
+                            image: DecorationImage(
+                              image: NetworkImage(imageUrl),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
                         ),
-                      ),
-                      Text(
-                        '${(progress * 100).toInt()}%',
-                        style: textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.primary,
+                        Positioned(
+                          top: 16,
+                          right: 16,
+                          child: GestureDetector(
+                            onTap: () async {
+                              if (isBookmarked) {
+                                await PinnedCoursesStorage.removePinnedCourse(courseId);
+                              } else {
+                                await PinnedCoursesStorage.addPinnedCourse(courseId);
+                              }
+                              setState(() {});
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: isBookmarked ? colorScheme.primary : Colors.white.withOpacity(0.9),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                                size: 20,
+                                color: isBookmarked ? colorScheme.onPrimary : const Color(0xFF64748B),
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      minHeight: 8,
-                      backgroundColor: colorScheme.surfaceContainerHighest,
-                      valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                        Positioned(
+                          top: 16,
+                          left: 16,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.4),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              tag,
+                              style: textTheme.labelSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+                    Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: textTheme.headlineMedium?.copyWith(
+                              fontSize: 24,
+                              color: textColor,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '${AppLocalizations.of(context)!.translate('professor').capitalize()}: $professorLabel',
+                            style: textTheme.bodyLarge?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Progress',
+                                style: textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              Text(
+                                '${(progress * 100).toInt()}%',
+                                style: textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: colorScheme.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(999),
+                            child: LinearProgressIndicator(
+                              value: progress,
+                              minHeight: 8,
+                              backgroundColor: colorScheme.surfaceContainerHighest,
+                              valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }

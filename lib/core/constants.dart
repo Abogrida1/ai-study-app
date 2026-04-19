@@ -204,3 +204,10 @@ class SupabaseConfig {
   static const String url = 'https://hrnzudvlazwlqdcbtgjn.supabase.co';
   static const String anonKey = 'sb_publishable_ajFGoPlO_g2p2UASEBslNg_wzi4pwuU';
 }
+
+extension StringExtension on String {
+  String capitalize() {
+    if (isEmpty) return this;
+    return "${this[0].toUpperCase()}${substring(1).toLowerCase()}";
+  }
+}

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/app_localizations.dart';
 import '../../../../core/cubit/auth_cubit.dart';
 import '../../../../core/cubit/auth_state.dart';
+import '../../../../core/local_storage/pinned_courses_storage.dart';
 import '../../../courses/presentation/cubit/course_cubit.dart';
 import '../../../courses/presentation/cubit/course_state.dart';
 import '../../../../core/presentation/widgets/modern_card.dart';
@@ -123,16 +124,43 @@ class StudentHomeScreen extends StatelessWidget {
                     if (courseState is EnrolledCoursesLoaded) {
                       final courses = courseState.courses;
                       if (courses.isEmpty) return const Center(child: Text('No courses pinned'));
-                      return Column(
-                        children: courses.map((course) => Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: _buildPinnedSubject(
-                            context: context,
-                            icon: Icons.menu_book,
-                            title: course.name,
-                            subtitle: course.code ?? '',
-                          ),
-                        )).toList(),
+                      
+                      return StreamBuilder<List<String>>(
+                        stream: PinnedCoursesStorage.pinnedCoursesStream,
+                        builder: (context, snapshot) {
+                          final pinnedCourseIds = snapshot.data ?? [];
+                          final pinnedCourses = courses.where((course) => pinnedCourseIds.contains(course.id)).toList();
+                          
+                          if (pinnedCourses.isEmpty) {
+                            return Center(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 24.0),
+                                child: Column(
+                                  children: [
+                                    Icon(Icons.bookmark_outline, size: 48, color: colorScheme.outline),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'No pinned courses',
+                                      style: textTheme.bodyLarge?.copyWith(color: colorScheme.onSurfaceVariant),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }
+                          
+                          return Column(
+                            children: pinnedCourses.map((course) => Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: _buildPinnedSubject(
+                                context: context,
+                                icon: Icons.menu_book,
+                                title: course.name,
+                                subtitle: course.code ?? '',
+                              ),
+                            )).toList(),
+                          );
+                        },
                       );
                     }
                     return const Center(child: CircularProgressIndicator());

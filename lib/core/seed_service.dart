@@ -128,7 +128,7 @@ class SeedService {
         }
       }
 
-      // Assign doctor to courses
+      // Assign doctor to demo courses only
       for (final course in courses) {
         try {
           await supabase.from('assignments').upsert({

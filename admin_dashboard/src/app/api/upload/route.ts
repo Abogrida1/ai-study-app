@@ -60,6 +60,32 @@ export async function POST(request: NextRequest) {
 async function processCourses(rows: Record<string, unknown>[]) {
   const results = { total: rows.length, success: 0, errors: [] as string[] };
 
+  // DELETE dependencies first - cascade should handle this but let's be explicit
+  // 1. Get all course IDs before deleting
+  const { data: oldCourses } = await supabaseAdmin.from('courses').select('id');
+  
+  if (oldCourses && oldCourses.length > 0) {
+    const courseIds = oldCourses.map((c: { id: string }) => c.id);
+    
+    // Delete lectures
+    await supabaseAdmin.from('lectures').delete().in('course_id', courseIds);
+    
+    // Delete assignments
+    await supabaseAdmin.from('assignments').delete().in('course_id', courseIds);
+    
+    // Delete enrollments
+    await supabaseAdmin.from('enrollments').delete().in('course_id', courseIds);
+    
+    // Delete requirements
+    await supabaseAdmin.from('requirements').delete().in('course_id', courseIds);
+  }
+
+  // 2. DELETE old courses
+  const { error: deleteError } = await supabaseAdmin.from('courses').delete().neq('id', '');
+  if (deleteError) {
+    results.errors.push(`Error deleting old courses: ${deleteError.message}`);
+  }
+
   // Collect unique levels
   const levelSet = new Set<string>();
   for (const row of rows) {
@@ -107,7 +133,7 @@ async function processCourses(rows: Record<string, unknown>[]) {
 
     const { error } = await supabaseAdmin
       .from('courses')
-      .upsert({
+      .insert({
         code,
         name,
         name_ar: nameAr || null,
@@ -115,7 +141,7 @@ async function processCourses(rows: Record<string, unknown>[]) {
         level_id: levelMap[level] || null,
         semester: semester || null,
         has_sections: hasSections,
-      }, { onConflict: 'code' });
+      });
 
     if (error) {
       results.errors.push(`${code}: ${error.message}`);
@@ -132,6 +158,31 @@ async function processCourses(rows: Record<string, unknown>[]) {
 // ============================================
 async function processStudents(rows: Record<string, unknown>[]) {
   const results = { total: rows.length, success: 0, errors: [] as string[] };
+
+  // DELETE dependencies first
+  // 1. Get all current student IDs
+  const { data: studentIds } = await supabaseAdmin
+    .from('users')
+    .select('id')
+    .eq('role', 'student');
+
+  if (studentIds && studentIds.length > 0) {
+    const ids = studentIds.map((s: { id: string }) => s.id);
+    // Delete grades for these students
+    await supabaseAdmin.from('grades').delete().in('student_id', ids);
+    
+    // Delete chat memberships for these students
+    await supabaseAdmin.from('chat_members').delete().in('user_id', ids);
+    
+    // Delete enrollments
+    await supabaseAdmin.from('enrollments').delete().in('user_id', ids);
+  }
+
+  // 2. DELETE old students
+  const { error: deleteError } = await supabaseAdmin.from('users').delete().eq('role', 'student');
+  if (deleteError) {
+    results.errors.push(`Error deleting old students: ${deleteError.message}`);
+  }
 
   // Get levels & sections maps
   const { data: levels } = await supabaseAdmin.from('levels').select('id, name');
@@ -280,6 +331,28 @@ async function processStudents(rows: Record<string, unknown>[]) {
 async function processDoctors(rows: Record<string, unknown>[]) {
   const results = { total: rows.length, success: 0, errors: [] as string[] };
 
+  // DELETE dependencies first
+  // 1. Delete all lectures created by doctors
+  const { data: doctorIds } = await supabaseAdmin
+    .from('users')
+    .select('id')
+    .eq('role', 'doctor');
+
+  if (doctorIds && doctorIds.length > 0) {
+    const ids = doctorIds.map((d: { id: string }) => d.id);
+    // Delete lectures
+    await supabaseAdmin.from('lectures').delete().in('created_by', ids);
+    
+    // Delete assignments
+    await supabaseAdmin.from('assignments').delete().in('user_id', ids);
+  }
+
+  // 2. DELETE old doctors
+  const { error: deleteError } = await supabaseAdmin.from('users').delete().eq('role', 'doctor');
+  if (deleteError) {
+    results.errors.push(`Error deleting old doctors: ${deleteError.message}`);
+  }
+
   // Get courses map
   const { data: courses } = await supabaseAdmin.from('courses').select('id, code');
   const courseMap: Record<string, string> = {};
@@ -379,6 +452,28 @@ async function processDoctors(rows: Record<string, unknown>[]) {
 // ============================================
 async function processTAs(rows: Record<string, unknown>[]) {
   const results = { total: rows.length, success: 0, errors: [] as string[] };
+
+  // DELETE dependencies first
+  // 1. Get all current TA IDs
+  const { data: taIds } = await supabaseAdmin
+    .from('users')
+    .select('id')
+    .eq('role', 'ta');
+
+  if (taIds && taIds.length > 0) {
+    const ids = taIds.map((t: { id: string }) => t.id);
+    // Delete lectures created by TAs
+    await supabaseAdmin.from('lectures').delete().in('created_by', ids);
+    
+    // Delete assignments
+    await supabaseAdmin.from('assignments').delete().in('user_id', ids);
+  }
+
+  // 2. DELETE old TAs
+  const { error: deleteError } = await supabaseAdmin.from('users').delete().eq('role', 'ta');
+  if (deleteError) {
+    results.errors.push(`Error deleting old TAs: ${deleteError.message}`);
+  }
 
   // Get courses map
   const { data: courses } = await supabaseAdmin.from('courses').select('id, code, level_id');

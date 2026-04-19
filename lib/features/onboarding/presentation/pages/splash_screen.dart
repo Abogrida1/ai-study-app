@@ -52,6 +52,7 @@ class _SplashScreenState extends State<SplashScreen> {
         case 'doctor':
           destination = const DoctorShell();
           break;
+        case 'ta':
         case 'assistant':
           destination = const AssistantShell();
           break;

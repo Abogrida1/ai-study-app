@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/app_localizations.dart';
 import '../../../../core/widgets/modern_nav_bar.dart';
 import 'assistant_home_screen.dart';
+import 'assistant_labs_screen.dart';
 import 'assistant_profile_screen.dart';
 import 'assistant_messages_screen.dart';
 
@@ -17,7 +18,7 @@ class _AssistantShellState extends State<AssistantShell> {
 
   final List<Widget> _screens = [
     const AssistantHomeScreen(),
-    const Center(child: Text('Lab Schedule Placeholder')),
+    const AssistantLabsScreen(),
     const AssistantMessagesScreen(),
     const AssistantProfileScreen(),
   ];

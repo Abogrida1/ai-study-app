@@ -1,7 +1,110 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/cubit/auth_cubit.dart';
+import '../../../../core/cubit/auth_state.dart';
+import '../../../../core/supabase_client.dart';
 
-class AssistantHomeScreen extends StatelessWidget {
+class AssistantHomeScreen extends StatefulWidget {
   const AssistantHomeScreen({super.key});
+
+  @override
+  State<AssistantHomeScreen> createState() => _AssistantHomeScreenState();
+}
+
+class _AssistantHomeScreenState extends State<AssistantHomeScreen> {
+  late Future<List<Map<String, dynamic>>> _assignedSectionsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    final authState = context.read<AuthCubit>().state;
+    if (authState is AuthAuthenticated && authState.userId != null) {
+      _assignedSectionsFuture = _loadAssignedSections(authState.userId!);
+    } else {
+      _assignedSectionsFuture = Future.value([]);
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _loadAssignedSections(String userId) async {
+    // Step 1: Get assignments for this TA
+    final assignResponse = await supabase
+        .from('assignments')
+        .select('scope_id, course_id, scope, role')
+        .eq('user_id', userId)
+        .eq('scope', 'section')
+        .limit(2); // Only show first 2 on home screen
+
+    final assignments = assignResponse.whereType<Map<String, dynamic>>().toList();
+    if (assignments.isEmpty) {
+      return [];
+    }
+
+    final sectionIds = assignments
+        .map((a) => a['scope_id'])
+        .whereType<String>()
+        .toSet()
+        .toList();
+    
+    final courseIds = assignments
+        .map((a) => a['course_id'])
+        .whereType<String>()
+        .toSet()
+        .toList();
+
+    if (sectionIds.isEmpty || courseIds.isEmpty) {
+      return [];
+    }
+
+    // Step 2: Fetch sections with their levels
+    final sectionsResponse = await supabase
+        .from('sections')
+        .select('id, name, name_ar, level_id, level:levels(name, name_ar, "order")')
+        .inFilter('id', sectionIds);
+
+    final coursesResponse = await supabase
+        .from('courses')
+        .select('id, code, name, name_ar, semester, credit_hours')
+        .inFilter('id', courseIds);
+
+    // Build lookup maps
+    final sectionsMap = <String, Map<String, dynamic>>{};
+    for (final section in sectionsResponse.whereType<Map<String, dynamic>>()) {
+      sectionsMap[section['id'] as String] = section;
+    }
+
+    final coursesMap = <String, Map<String, dynamic>>{};
+    for (final course in coursesResponse.whereType<Map<String, dynamic>>()) {
+      coursesMap[course['id'] as String] = course;
+    }
+
+    // Step 3: Build result list from assignments
+    return assignments.map((assignment) {
+      final sectionId = assignment['scope_id'] as String?;
+      final courseId = assignment['course_id'] as String?;
+
+      final section = sectionId != null ? sectionsMap[sectionId] : null;
+      final course = courseId != null ? coursesMap[courseId] : null;
+
+      final courseName = course != null
+          ? (course['name_ar'] as String?)?.trim().isNotEmpty == true
+              ? course['name_ar'] as String
+              : course['name'] as String? ?? 'Unknown Course'
+          : 'Unknown Course';
+      
+      final sectionName = section != null
+          ? (section['name_ar'] as String?)?.trim().isNotEmpty == true
+              ? section['name_ar'] as String
+              : section['name'] as String? ?? 'Section'
+          : 'Section';
+
+      return {
+        'courseName': courseName,
+        'sectionName': sectionName,
+        'courseCode': course?['code'] as String? ?? '',
+      };
+    }).toList();
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -63,22 +166,55 @@ class AssistantHomeScreen extends StatelessWidget {
                   subtitle: 'معامل التدريس المعينة لي',
                 ),
                 const SizedBox(height: 16),
-                _buildCourseCard(
-                  context,
-                  title: 'Data Structures Lab',
-                  subtitle: 'معمل هياكل البيانات',
-                  icon: Icons.code_rounded,
-                  color: Colors.blue.shade50,
-                  iconColor: colorScheme.primary,
-                ),
-                const SizedBox(height: 12),
-                _buildCourseCard(
-                  context,
-                  title: 'Logic Design Lab',
-                  subtitle: 'معمل التصميم المنطقي',
-                  icon: Icons.memory_rounded,
-                  color: Colors.amber.shade50,
-                  iconColor: Colors.amber.shade900,
+                FutureBuilder<List<Map<String, dynamic>>>(
+                  future: _assignedSectionsFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return Center(
+                        child: SizedBox(
+                          height: 60,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(colorScheme.primary),
+                          ),
+                        ),
+                      );
+                    }
+
+                    final sections = snapshot.data ?? [];
+                    if (sections.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24.0),
+                        child: Text(
+                          'No assigned lab sections',
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      );
+                    }
+
+                    return Column(
+                      children: sections.map((section) {
+                        final colors = [Colors.blue.shade50, Colors.amber.shade50];
+                        final icons = [Icons.code_rounded, Icons.memory_rounded];
+                        final iconColors = [colorScheme.primary, Colors.amber.shade900];
+                        final idx = sections.indexOf(section);
+                        
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12.0),
+                          child: _buildCourseCard(
+                            context,
+                            title: section['courseName'] as String,
+                            subtitle: section['sectionName'] as String,
+                            icon: icons[idx % icons.length],
+                            color: colors[idx % colors.length],
+                            iconColor: iconColors[idx % iconColors.length],
+                          ),
+                        );
+                      }).toList(),
+                    );
+                  },
                 ),
                 const SizedBox(height: 40),
 

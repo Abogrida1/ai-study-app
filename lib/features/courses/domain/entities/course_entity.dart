@@ -9,6 +9,7 @@ class CourseEntity extends Equatable {
   final int? creditHours;
   final String? semester;
   final String? thumbnailUrl;
+  final String? professorName;
 
   const CourseEntity({
     required this.id,
@@ -19,8 +20,9 @@ class CourseEntity extends Equatable {
     this.creditHours,
     this.semester,
     this.thumbnailUrl,
+    this.professorName,
   });
 
   @override
-  List<Object?> get props => [id, code, name, nameAr, description, creditHours, semester, thumbnailUrl];
+  List<Object?> get props => [id, code, name, nameAr, description, creditHours, semester, thumbnailUrl, professorName];
 }
